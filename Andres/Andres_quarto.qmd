@@ -1,21 +1,94 @@
 ---
-title: "Andres_quarto"
-format: html
+title: "Andres"
+author: "Andrés A."
+date: "today"
+format: 
+  html:
+    fig-width: 8
+    fig-height: 8
+    code-fold: TRUE
 ---
 
 ## Why this graph ?
 
+To analyze the tweets, we devised a controversial score. This score was formulated under the premise that a higher number of replies compared to likes indicates a more controversial tweet, while a higher number of likes relative to replies suggests greater agreement on the topic. Hence, we utilized the following formula to provide a clearer representation of the data.
+
+
 $$ \text{Controversial Score} = \frac{\text{replies\_count}}{\text{likes\_count} + \text{retweets\_count} + 1}$$
+Therefore: 
+
+- As we move towards the right, the tweet have more likes.
+- As we move towards the top, the tweet becomes increasingly controversial.
+
+Limitation:
+
+- Tweets with a low number of likes were excluded due to challenges in calculating scores accurately.
+- The use of log visualization could potentially lead to misinterpretation.
 
 
-
-## Graph
+## Visual representation
 
 ```{r}
-#| label: fig-NutriPlot1
-#| fig-cap: "for 100g of content"
 #| warning: false
+#| include: false
 
+rm(list = ls())
+library(tidyverse)
+library(plotly)
+library(knitr)
+library(DT)
+library(crosstalk)
+
+dr <- read_rds("../Data/tweets.rds")
+source("../Andres/Andres_function.R")
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+
+```{r}
+#| label: fig-Plot1
+#| fig-cap: "Visual representation of tweets"
+
+
+df_shared <- SharedData$new(df, key = ~likes_count)
+
+
+p <- df_shared %>% 
+  ggplot(aes(likes_count, score, color = score, 
+             text = paste("score:",round(score,2),"\n",
+                          "Likes:",round(likes_count,2),"\n",
+                          "replies:",round(replies_count,2),"\n",
+                          tweet_content )
+             )
+  ) + 
+  geom_point()+
+  scale_color_gradient(low = 'green',high = "red",transform = "log10") +
+  scale_x_log10() + 
+  scale_y_log10() + 
+  labs(x = "Number of likes", 
+       y = "Controversial Score")
+
+ggplotly(p, tooltip ="text")
+
+
+```
+ 
+# Tabular representation 
+ 
+```{r,include=T}
+#| fig-cap: "Table"
+#| warning: false
+
+t <- df_shared %>% 
+  DT::datatable(colnames = c("date","score","likes_count","replies_count","tweet","URL"),
+                options = list(paging = T, 
+                               pageLength = 20,
+                               dom = "t",
+                               scrollX = TRUE),
+                rownames = FALSE,
+                filter = 'top',
+                escape = F)
+
+
+t
+
+```
