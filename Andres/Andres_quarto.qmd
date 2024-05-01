@@ -1,0 +1,21 @@
+---
+title: "Andres_quarto"
+format: html
+---
+
+## Why this graph ?
+
+$$ \text{Controversial Score} = \frac{\text{replies\_count}}{\text{likes\_count} + \text{retweets\_count} + 1}$$
+
+
+
+## Graph
+
+```{r}
+#| label: fig-NutriPlot1
+#| fig-cap: "for 100g of content"
+#| warning: false
+
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
