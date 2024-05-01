@@ -6,6 +6,9 @@ pacman::p_load(tidyverse)
 read_csv("Data/20min_fr.csv") %>% 
   write_rds("Data/tweets.rds")
 
+# Newlines
+newline <- "\n"
+
 # days dataset
 read_csv("Data/20min_fr.csv") %>% 
   select(id, date, time, tweet, 
