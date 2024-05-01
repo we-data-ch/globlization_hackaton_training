@@ -7,7 +7,7 @@ read_csv("Data/20min_fr.csv") %>%
   write_rds("Data/tweets.rds")
 
 # Newlines
-newlines <- "\n"
+newline <- "\n"
 
 # days dataset
 read_csv("Data/20min_fr.csv") %>% 
