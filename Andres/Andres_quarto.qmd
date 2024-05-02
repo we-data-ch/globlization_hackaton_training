@@ -1,5 +1,5 @@
 ---
-title: "Andres"
+title: "Analysis of 20 minutes articles"
 author: "Andrés A."
 date: "today"
 format: 
@@ -25,6 +25,13 @@ Limitation:
 - Tweets with a low number of likes were excluded due to challenges in calculating scores accurately.
 - The use of log visualization could potentially lead to misinterpretation.
 
+
+## Used tools/packages
+
++ ggplotly: Extends ggplot2 with interactivity, enabling the creation of interactive plots from ggplot2 objects.
++ DT: Facilitates the creation of interactive data tables in R, offering features like sorting and filtering.
++ crosstalk: Enables communication between interactive HTML widgets, allowing for linked brushing and filtering.
++ Quarto: A dynamic document creation tool in R that integrates code, text, and output for reproducible reports and presentations.
 
 ## Visual representation
 
