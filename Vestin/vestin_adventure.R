@@ -1,84 +1,86 @@
 # Libraries ----
 pacman::p_load(tidyverse, plotly, dlookr, 
-               tidytext, syuzhet, stopwords,
-               FactoMineR, factoextra)
+               tidytext,
+               FactoMineR, factoextra,
+               tictoc, recipes)
 
 # Options ----
 theme_set(theme_bw())
 
 # Data ----
 ## Hashtag data
-hashtag <- read_rds("Data/days.rds")
+hashtag <- read_rds("Data/hashtags.rds")
 tweets <- read_rds("Data/tweets.rds")
 days <- read_rds("Data/days.rds")
 
-## Tweets
-id_days <- 
+the_dates <- 
   days %>% 
-  mutate(new_id = 1:nrow(.),
-         .before = id) %>% 
-  select(new_id, id)
+  distinct(id, date) %>% 
+  pull(date)
 
-days_tf_idf <- 
-  days %>% 
-  mutate(new_id = 1:nrow(.),
-         .before = id) %>% 
-  select(new_id, tweet) %>% 
-  mutate(tweet = str_remove_all(tweet, "https?.*$|https?|t.co")) %>% 
-  unnest_tokens("words", "tweet", drop = TRUE) %>% 
-  filter(!words %in% stopwords("fr", "stopwords-iso"),
-         !str_detect(words, "\\_|[0-9]|\\.|\\,")) %>% 
-  group_by(new_id) %>% 
+(
+  df_embed <-
+    read_rds("Data/df_embed.rds") %>% 
+    mutate(date = the_dates,
+           .before = 1) %>% 
+    column_to_rownames("date")
+  )
+
+# New HCPC ~30sec/~24sec
+tic()
+my_hcpc <- HCPC(df_embed, nb.clust = -1, 
+                graph = FALSE, 
+                nb.par = 10)
+toc()
+
+fviz_cluster(my_hcpc)
+
+c1 <- my_hcpc$desc.ind$para$`1` %>% names()
+c2 <- my_hcpc$desc.ind$para$`2` %>% names()
+c3 <- my_hcpc$desc.ind$para$`3` %>% names()
+
+c1
+c2
+c3
+
+df_clust <- 
+  my_hcpc$data.clust %>% 
+  # tibble() %>% 
+  select(-starts_with("dim")) %>% 
+  rownames_to_column("date") %>% 
+  tibble() %>% 
+  mutate(date = as_date(date))
+  
+tweets_clust <- 
+  tweets %>%
+  left_join(df_clust)
+
+write_rds(tweets_clust, file = "Data/tweets_clust.rds")
+
+# CLuster description
+words_clust <- 
+  tweets_clust %>% 
+  select(clust, tweet) %>% 
+  unnest_tokens("words", "tweet") %>% 
+  anti_join(tibble(words = stopwords::data_stopwords_stopwordsiso$fr)) %>% 
+  filter(!str_detect(words, "\\d+|\\.|\\,|https?|\\_|aa"))
+  
+words_clust %>% 
+  mutate(words = str_remove(words, "\\w(’|')")) %>% 
+  group_by(clust) %>% 
   count(words, sort = TRUE) %>% 
   filter(n > 5) %>% 
+  bind_tf_idf(words, clust, n) %>% 
+  top_n(tf_idf, n = 10) %>% 
   ungroup() %>% 
-  bind_tf_idf(term = words, document = new_id, n = n)
+  ggplot(aes(reorder_within(words, tf_idf, clust), tf_idf, fill = clust)) +
+  geom_col() +
+  scale_x_reordered() +
+  facet_wrap(~clust, scales = "free") +
+  coord_flip() +
+  labs(title = "TF-IDF des termes par cluster journalier",
+       x = NULL, y = NULL)
 
-my_matrix <- 
-  days_tf_idf %>% 
-  select(new_id, words, val = n) %>% 
-  spread(words, val, fill = 0) %>%  
-  column_to_rownames("new_id")
-
-my_pca <-
-  my_matrix %>% 
-  PCA()
-
-# my_pca$ind$coord
-
-my_hcpc <- HCPC(my_pca, nb.clust = 5)
-
-cluster_a <- fviz_cluster(my_hcpc)
-
-ggplotly(cluster_a)
-
-days_tf_idf %>% 
-  count(new_id, sort = TRUE)
-
-
-period_sum <- 
-  days %>% 
-  mutate(new_id = 1:nrow(.),
-         .before = id) %>% 
-  select(date, new_id) %>% 
-  left_join(days_tf_idf) %>% 
-  drop_na() %>% 
-  mutate(week = floor_date(date, unit = "weeks"),
-         month = floor_date(date, unit = "months"),
-         .after = date)
-
-
-period_sum %>% 
-  summarise(n = sum(n),
-            .by = week) %>% 
-  filter(n < 100) %>% 
-  ggplot(aes(n)) +
-  geom_histogram()
-
-
-  period_sum %>% 
-  summarise(n = sum(n),
-            .by = month) %>% 
-  ggplot(aes(n)) +
-    geom_histogram()
-
+# Topic 1: Champs lexical de la culture
+# Topic 2: ???
+# Topic 3: CHamps lexical de l'économie
